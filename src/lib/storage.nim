@@ -164,5 +164,3 @@ proc setArchive*(items: OrderedTable[string, Item]) =
     writeFile(tempStorageFile, pretty(obj, 4))
     removeFile(archiveFile)
     moveFile(tempStorageFile, archiveFile)
-
-setItems(getItems())
