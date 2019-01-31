@@ -151,7 +151,7 @@ proc setItems*(items: OrderedTable[string, Item]) =
     let tempStorageFile = getTempFile("storage")
     echo tempStorageFile
     writeFile(tempStorageFile, pretty(obj, 4))
-    removeFile(mainStorageFile)
+    discard tryRemoveFile(mainStorageFile)
     moveFile(tempStorageFile, mainStorageFile)
 
 proc setArchive*(items: OrderedTable[string, Item]) =
@@ -162,5 +162,5 @@ proc setArchive*(items: OrderedTable[string, Item]) =
 
     let tempStorageFile = getTempFile("archive")
     writeFile(tempStorageFile, pretty(obj, 4))
-    removeFile(archiveFile)
+    discard tryRemoveFile(archiveFile)
     moveFile(tempStorageFile, archiveFile)
