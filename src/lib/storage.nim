@@ -1,10 +1,15 @@
-import os, random, json, strformat, tables, sequtils, times, options
+import os, random, json, strformat, tables, sequtils, times, options, strutils
 
 import config
 import render
 import item, task, note
 
 randomize()
+
+type ItemMap* = OrderedTable[int, Item]
+
+template initItemMap*(size = 64): untyped =
+    initOrderedTable[int, Item](size)
 
 let mainAppDir: string = block:
     let taskbookDir = tbConfig.taskbookDirectory
@@ -116,31 +121,31 @@ proc itemToJson(item: Item): JsonNode =
         result.add("priority", newJInt(task.priority))
         result.add("inProgress", newJBool(task.inProgress))
 
-var cachedItems = none[OrderedTable[string, Item]]()
+var cachedItems = none[OrderedTable[int, Item]]()
 
-proc getItems*(): OrderedTable[string, Item] = 
+proc getItems*(): OrderedTable[int, Item] = 
     if cachedItems.isSome(): return cachedItems.get()
 
     if not mainStorageFile.existsFile(): return
-    result = initOrderedTable[string, Item]()
+    result = initItemMap()
 
     let jsonRes = json.parseFile(mainStorageFile)
     
     for field in jsonRes.fields.keys():
-        result.add(field, jsonRes[field].jsonToItem())
+        result.add(parseInt(field), jsonRes[field].jsonToItem())
 
     cachedItems = some(result)
 
-proc getArchive*(): OrderedTable[string, Item] = 
+proc getArchive*(): OrderedTable[int, Item] = 
     if not archiveFile.existsFile(): return
-    result = initOrderedTable[string, Item]()
+    result = initItemMap()
 
     let jsonRes = json.parseFile(mainStorageFile)
     
     for field in jsonRes.fields.keys():
-        result.add(field, jsonRes[field].jsonToItem())
+        result.add(parseInt(field), jsonRes[field].jsonToItem())
 
-proc setItems*(items: OrderedTable[string, Item]) =
+proc setItems*(items: OrderedTable[int, Item]) =
     cachedItems = some(items)
     
     let obj = newJObject();
@@ -149,12 +154,11 @@ proc setItems*(items: OrderedTable[string, Item]) =
         obj.add($i, items[i].itemToJson())
 
     let tempStorageFile = getTempFile("storage")
-    echo tempStorageFile
     writeFile(tempStorageFile, pretty(obj, 4))
     discard tryRemoveFile(mainStorageFile)
     moveFile(tempStorageFile, mainStorageFile)
 
-proc setArchive*(items: OrderedTable[string, Item]) =
+proc setArchive*(items: OrderedTable[int, Item]) =
     let obj = newJObject();
 
     for i in items.keys():

@@ -7,12 +7,16 @@ type Task* = ref object of Item
     inProgress*: bool
     priority*: int
 
-proc newTask*(isComplete, inProgress, isStarred = false, priority = 1): Task = 
+proc newTask*(id: int, isComplete, inProgress, isStarred = false, priority = 1): Task = 
+    let dt = now()
+
     Task(
+        id: id,
         isTask: true, 
         isComplete: isComplete,
         inProgress: inProgress,
         isStarred: isStarred,
         priority: priority,
-        timestamp: now()
+        timestamp: now(),
+        date: dt.format("ddd MMM dd UUUU"),
     )

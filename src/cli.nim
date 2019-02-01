@@ -47,12 +47,9 @@ proc handleArgs(args: seq[string]) =
     of "v", "version":
       discard
 
-proc displayBoard() = 
-  echo "DISPLAY BOARD"
-
 let args = commandLineParams()
 
 if args.len > 0:
   handleArgs(args)
 else:
-  displayBoard()
+  taskbook.displayByBoard()
