@@ -17,12 +17,14 @@ when defined(windows):
 
     let stdoutHandle = getStdHandle(-11)
 
-    # var mode: int
-    # if getConsoleMode(stdoutHandle, mode) == 0:
-    #     echo "Error getting console mode: ", GetLastError()
+    var mode: int
+    if getConsoleMode(stdoutHandle, mode) == 0:
+        echo "Error getting console mode"
+        quit(1)
 
-    # if setConsoleMode(stdoutHandle, mode or 0x0200) == 0:
-    #     echo "Error getting console mode: ", GetLastError()
+    if setConsoleMode(stdoutHandle, mode or 0x4) == 0:
+        echo "This application requires Windows 10"
+        quit(1)
 
     proc writeStdout*(text: string) =
         let convertedString = convert(text, "utf-16", "utf-8")
