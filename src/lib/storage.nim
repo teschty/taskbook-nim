@@ -126,8 +126,8 @@ var cachedItems = none[OrderedTable[int, Item]]()
 proc getItems*(): OrderedTable[int, Item] = 
     if cachedItems.isSome(): return cachedItems.get()
 
-    if not mainStorageFile.existsFile(): return
     result = initItemMap()
+    if not mainStorageFile.existsFile(): return
 
     let jsonRes = json.parseFile(mainStorageFile)
     
@@ -137,8 +137,8 @@ proc getItems*(): OrderedTable[int, Item] =
     cachedItems = some(result)
 
 proc getArchive*(): OrderedTable[int, Item] = 
-    if not archiveFile.existsFile(): return
     result = initItemMap()
+    if not archiveFile.existsFile(): return
 
     let jsonRes = json.parseFile(mainStorageFile)
     

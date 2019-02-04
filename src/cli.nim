@@ -4,12 +4,14 @@ import strutils
 import lib/taskbook
 import lib/config
 
-echo "'", tbConfig.taskbookDirectory, "'"
-
 proc handleArgs(args: seq[string]) = 
   var cmd = args[0]
   if cmd.startsWith("--"):
     cmd = cmd.substr(2)
+  elif cmd.startsWith("-"):
+    cmd = cmd.substr(1)
+
+  let input = args[1..^1]
 
   case cmd:
     of "a", "archive":
@@ -41,7 +43,7 @@ proc handleArgs(args: seq[string]) =
     of "s", "star":
       discard
     of "t", "task":
-      discard
+      taskbook.createTask(input)
     of "i", "timeline":
       discard
     of "v", "version":
@@ -49,7 +51,11 @@ proc handleArgs(args: seq[string]) =
 
 let args = commandLineParams()
 
+echo "args = ", args
+
 if args.len > 0:
   handleArgs(args)
 else:
   taskbook.displayByBoard()
+  
+taskbook.displayStats()

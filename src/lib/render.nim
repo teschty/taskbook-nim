@@ -1,8 +1,10 @@
-# import terminal
 import strformat
 import strutils
 import tables
 import sequtils
+import times
+import math
+
 import colorize
 
 import figures
@@ -31,48 +33,58 @@ proc isBoardComplete(items: seq[Item]): bool =
     let (tasks, complete, notes) = getItemStats(items)
 
 proc error(message: string, prefix = "", suffix = "") =
-    writeStdout prefix
+    writeStdout prefix & " "
     writeStdout fgRed(" " & figures.cross)
     writeStdout message & " "
     writeStdout suffix
     writeStdout lineEnding
 
 proc success(message: string, prefix = "", suffix = "") =
-    writeStdout prefix
-    writeStdout fgGreen(" " & figures.tick)
+    writeStdout prefix & " "
+    writeStdout fgGreen(figures.tick)
     writeStdout message & " "
     writeStdout suffix
     writeStdout lineEnding
 
 proc awaiting(message: string, prefix = "", suffix = "") =
-    writeStdout prefix
-    writeStdout fgMagenta(" [ ]")
+    writeStdout prefix & " "
+    writeStdout fgMagenta("[ ]")
     writeStdout message & " "
     writeStdout suffix
     writeStdout lineEnding
 
 proc pending(message: string, prefix = "", suffix = "") =
-    writeStdout prefix
-    writeStdout fgMagenta(" [ ]  ")
+    writeStdout prefix & " "
+    writeStdout fgMagenta("[ ]  ")
     writeStdout message & " "
     writeStdout suffix
     writeStdout lineEnding
 
 proc note(message: string, prefix = "", suffix = "") =
-    writeStdout prefix
-    writeStdout fgBlue(" * ")
+    writeStdout prefix & " "
+    writeStdout fgBlue("* ")
     writeStdout message & " "
     writeStdout suffix
     writeStdout lineEnding
 
 proc log(message: string, prefix = "", suffix = "") =
-    writeStdout prefix
+    writeStdout prefix & " "
     writeStdout message & " "
     writeStdout suffix
     writeStdout lineEnding
 
+proc getAge(birthday: int): string =
+    let 
+        daytime = 24 * 60 * 60 * 1000
+        age = int(round(float(birthday - toUnix(getTime())) / float(daytime)))
+
+    if age == 0: "" else: fgDarkGray($age & "d")
+
 proc invalidCustomAppDir*(path: string) =
     error("Custom app directory was not found on your system:", "\n", fgRed(path))
+
+proc missingDesc*() =
+    error("No description was given as input", "\n")
 
 proc missingId*() =
     error("No id was given as input", "\n")
@@ -80,9 +92,18 @@ proc missingId*() =
 proc invalidId*(id: int) =
     error("Unable to find item with id:", "\n", fgDarkGray($id))
 
+proc invalidIdsNumber*() =
+    error("More than one ids were given as input", "\n")
+
+proc invalidPriority*() =
+    error("Priority can only be 1, 2, or 3", "\n")
+
 proc successCreate*(item: Item) =
     let itemType = if item.isTask: "task" else: "note"
     success(fmt"Created {itemType}:", "\n", fgDarkGray($item.id))
+
+proc successEdit*(id: int) =
+    success(fmt"Updated description of item:", "\n", fgDarkGray($id))
 
 proc markItem(ids: seq[int], verb, noun, pluralNoun: string) =
     if ids.len == 0: return
@@ -108,8 +129,29 @@ proc markStarred*(ids: seq[int]) =
 proc markUnstarred*(ids: seq[int]) =
     markItem(ids, "Unstarred", "item", "items")
 
+proc missingBoards*() =
+    error("No boards were given as input", "\n")
+
 proc successDelete*(ids: seq[int]) =
     markItem(ids, "Deleted", "item", "items")
+
+proc successMove*(id: int, boards: seq[string]) =
+    success(fmt"Move item {fgDarkGray($id)} to", "\n", fgDarkGray(boards.join(", ")))
+
+proc successPriority*(id: int, level: string) =
+    let suffix = if level == "3":
+        fgRed("high")
+    elif level == "2":
+        fgYellow("medium")
+    else:
+        fgGreen("normal")
+        
+    success(fmt"Updated priority of task: {fgDarkGray($id)} to", "\n", suffix)
+
+proc successRestore*(ids: seq[int]) =
+    let noun = if ids.len > 1: "items" else: "item"
+
+    success(fmt"restored {noun}:", "\n", fgDarkGray(ids.join(", ")))
 
 proc getCorrelation(items: seq[Item]): string =
     let (tasks, complete, _) = getItemStats(items) 
@@ -150,7 +192,6 @@ proc buildMessage(item: Item): string =
         (isComplete, priority) = (t.isComplete, t.priority)
 
     if not isComplete and priority > 1:
-        echo "NOT COMPLETE AND HIGH PRIORITY"
         message.add underline(fgYellow(description))
     else:
         message.add(if isComplete: fgDarkGray(description) else: description)
@@ -179,7 +220,25 @@ proc displayItemByDate(item: Item) =
     else:
         note(message, prefix, suffix)
 
-    
+proc displayItemByBoard(item: Item) =
+    let boards = item.boards.filterIt(it != "My Board")
+    let age = getAge(int(item.timestamp.toTime.toUnix))
+    let star = getStar(item)
+
+    let prefix = buildPrefix(item)
+    let message = buildMessage(item)
+    let suffix = if age.len == 0: star else: age & " " & star
+
+    if item.isTask:
+        let t = Task(item)
+        if t.isComplete:
+            success(message, prefix, suffix)
+        elif t.inProgress:
+            awaiting(message, prefix, suffix)
+        else:
+            pending(message, prefix, suffix)
+    else:
+        note(message, prefix, suffix)
 
 proc displayByDate*(data: OrderedTable[string, seq[Item]]) =
     for date in data.keys:
@@ -192,3 +251,45 @@ proc displayByDate*(data: OrderedTable[string, seq[Item]]) =
                 continue
 
             displayItemByDate(item) 
+
+proc displayByBoard*(data: OrderedTable[string, seq[Item]]) =
+    for board in data.keys:
+        if isBoardComplete(data[board]) and tbConfig.displayCompleteTasks:
+            continue
+
+        displayTitle(board, data[board])
+        for item in data[board]:
+            if item.isTask and Task(item).isComplete and not tbConfig.displayCompleteTasks:
+                continue
+
+            displayItemByBoard(item)
+
+type Stats = tuple[percent: int, complete: int, inProgress: int, pending: int, notes: int]
+
+proc displayStats*(stats: Stats) =
+    if not tbConfig.displayProgressOverview: return
+    let (percent, complete, inProgress, pending, notes) = stats
+
+    let percentStr = if percent >= 75: 
+        fgGreen($percent & "%") 
+    elif percent >= 50:
+        fgYellow($percent & "%")
+    else:
+        $percent & "%"
+
+    let status = [
+        fgGreen($complete) & " " & fgDarkGray("done"),
+        fgBlue($inProgress) & " " & fgDarkGray("in progress"),
+        fgMagenta($pending) & " " & fgDarkGray("pending"),
+        fgBlue($notes) & " " & fgDarkGray(if notes == 1: "note" else: "notes"),
+    ]
+
+    if complete != 0 and inProgress == 0 and pending == 0 and notes == 0:
+        log("All done!", "\n ", fgYellow("★"))
+
+    if pending + inProgress + complete + notes == 0:
+        log("Type `tb --help` to get started!", suffix = fgYellow("★"))
+
+    log(fgDarkGray(fmt"{percentStr} of all tasks complete."), "\n ")
+    log(status.join(fgDarkGray(" · ")), " ", "\n")
+    
