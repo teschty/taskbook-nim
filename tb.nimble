@@ -11,3 +11,4 @@ bin           = @["tb"]
 # Dependencies
 
 requires "nim >= 0.19.2"
+requires "colorize >= 0.2.0"

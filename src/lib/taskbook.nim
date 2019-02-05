@@ -294,7 +294,7 @@ proc findItems*(terms: openArray[string]) =
     var data = storage.getItems()
 
     for id in data.keys:
-        if not hasTerms(data[id].description, terms): return
+        if not hasTerms(data[id].description, terms): continue
 
         result[id] = data[id]
     

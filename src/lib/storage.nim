@@ -72,8 +72,17 @@ proc jsonToItem(jn: JsonNode): Item =
     let boards = jn["boards"].getElems().mapIt(it.getStr())
     let isTask = jn["_isTask"].getBool()
     let isComplete = jn{"isComplete"}.getBool()
-    let priority = jn{"priority"}.getInt()
     let inProgress = jn{"inProgress"}.getBool(false)
+
+    # Original taskbook - when it updates priorities, sets them as a string
+    # for some reason, so we have to be able to handle that
+    let priorityJson = jn{"priority"}
+    var priority = 1
+
+    if priorityJson != nil and priorityJson.kind == JString:
+        priority = priorityJson.getStr().parseInt()
+    else:
+        priority = priorityJson.getInt()
 
     if isTask:
         Task(

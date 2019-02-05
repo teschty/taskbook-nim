@@ -1,16 +1,7 @@
-import strformat
-import strutils
-import tables
-import sequtils
-import times
-import math
-
+import strformat, strutils, tables, sequtils, times, math
 import colorize
 
-import figures
-import console
-import config
-import util
+import figures, console, config, util
 import item, note, task
 
 const lineEnding = when defined(windows): "\r\n" else: "\n"
@@ -62,7 +53,7 @@ proc pending(message: string, prefix = "", suffix = "") =
 
 proc note(message: string, prefix = "", suffix = "") =
     writeStdout prefix & " "
-    writeStdout fgBlue("* ")
+    writeStdout fgBlue("*  ")
     writeStdout message & " "
     writeStdout suffix
     writeStdout lineEnding
@@ -73,10 +64,10 @@ proc log(message: string, prefix = "", suffix = "") =
     writeStdout suffix
     writeStdout lineEnding
 
-proc getAge(birthday: int): string =
-    let 
-        daytime = 24 * 60 * 60 * 1000
-        age = int(round(float(birthday - toUnix(getTime())) / float(daytime)))
+proc getAge(birthday: DateTime): string =
+    # can't use `days` proc as original taskbook rounds
+    let days = float((now() - birthday).hours()) / 24.0
+    let age = int(round(days))
 
     if age == 0: "" else: fgDarkGray($age & "d")
 
@@ -192,7 +183,12 @@ proc buildMessage(item: Item): string =
         (isComplete, priority) = (t.isComplete, t.priority)
 
     if not isComplete and priority > 1:
-        message.add underline(fgYellow(description))
+        if priority == 2:
+            message.add underline(fgYellow(description))
+            message.add fgYellow("(!)")
+        else:
+            message.add underline(fgRed(description))
+            message.add fgRed("(!!)")
     else:
         message.add(if isComplete: fgDarkGray(description) else: description)
 
@@ -222,7 +218,7 @@ proc displayItemByDate(item: Item) =
 
 proc displayItemByBoard(item: Item) =
     let boards = item.boards.filterIt(it != "My Board")
-    let age = getAge(int(item.timestamp.toTime.toUnix))
+    let age = getAge(item.timestamp)
     let star = getStar(item)
 
     let prefix = buildPrefix(item)
@@ -291,5 +287,5 @@ proc displayStats*(stats: Stats) =
         log("Type `tb --help` to get started!", suffix = fgYellow("★"))
 
     log(fgDarkGray(fmt"{percentStr} of all tasks complete."), "\n ")
-    log(status.join(fgDarkGray(" · ")), " ", "\n")
+    log(status.join(fgDarkGray(" · ")), " ")
     

@@ -1,5 +1,3 @@
-# mayhaps break this out into nimble package like npm package is
-
 when not defined(windows):
     const
         tick* = "✔"

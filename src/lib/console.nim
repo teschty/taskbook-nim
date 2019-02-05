@@ -1,5 +1,4 @@
-import terminal
-import encodings
+import terminal, encodings
 
 when defined(windows):
     proc writeConsoleW(
