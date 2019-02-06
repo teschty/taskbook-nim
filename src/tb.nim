@@ -36,6 +36,8 @@ proc handleArgs(args: seq[string]) =
       taskbook.beginTasks(tryParseIds(input))
     of "c", "check":
       taskbook.checkTasks(tryParseIds(input))
+    of "d", "delete":
+      taskbook.deleteItems(tryParseIds(input))
     of "clear":
       taskbook.clear()
     of "y", "copy":

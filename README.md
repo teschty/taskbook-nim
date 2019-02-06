@@ -1,6 +1,8 @@
 # taskbook-nim
 Drop-in replacement for [Taskbook](https://github.com/klaussinani/taskbook), written in Nim.
 
+The code was more or less ported directly, and is *definitely* not idiomatic. 
+
 Thanks to [Klaus Sinani](https://github.com/klaussinani) for creating Taskbook.
 
 ## Why?
