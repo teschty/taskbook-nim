@@ -1,6 +1,5 @@
 import item
-import times
-import options
+import times, options
 
 type Task* = ref object of Item
     isComplete*: bool
